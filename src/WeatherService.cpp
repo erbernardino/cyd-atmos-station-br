@@ -48,6 +48,14 @@ String WeatherService::getDayNamePT(int dayOfWeek) {
     }
 }
 
+static int dayOfWeekFromISODate(const char* iso) {
+    int y, m, d;
+    sscanf(iso, "%d-%d-%d", &y, &m, &d);
+    static const int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+    if (m < 3) y -= 1;
+    return (y + y / 4 - y / 100 + y / 400 + t[m - 1] + d) % 7;
+}
+
 String WeatherService::getAdvice(const CurrentWeather& current, const AirQuality& air) {
     if (current.uvIndex >= 8) return "UV Extremo: use protetor e oculos!";
     if (current.uvIndex >= 6) return "UV Alto: protecao solar indicada.";
@@ -127,7 +135,8 @@ bool WeatherService::updateWeatherData(float lat, float lon, CurrentWeather& cur
     daily.clear();
     for (size_t i = 0; i < d_time.size() && i < 7; i++) {
         DailyForecast df;
-        df.dayName = (i == 0) ? "HOJE" : ("D+" + String(i));
+        const char* dateStr = d_time[i];
+        df.dayName = (i == 0) ? "HOJE" : getDayNamePT(dayOfWeekFromISODate(dateStr));
         df.tempMax = d_tmax[i] | 0.0f;
         df.tempMin = d_tmin[i] | 0.0f;
         df.rainProbability = d_rain[i] | 0;

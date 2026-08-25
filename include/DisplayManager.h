@@ -21,6 +21,8 @@ public:
     void drawCard(int x, int y, int w, int h, const String& title = "");
     void drawWeatherIcon(int x, int y, int weatherCode, bool isDay, int size = 1);
 
+    static String sanitizeText(const String& text);
+
 private:
     TFT_eSPI tft;
     uint8_t currentBrightness;

@@ -8,7 +8,6 @@ void DisplayManager::init() {
     tft.setRotation(0); // 240x320 vertical (padrão Atmos)
     tft.fillScreen(COLOR_BG);
 
-    // Configura PWM para controle do brilho (compatível com ESP32 Core v3)
     ledcAttach(CYD_TFT_BL, 5000, 8);
     setBrightness(currentBrightness);
 }
@@ -18,13 +17,46 @@ void DisplayManager::setBrightness(uint8_t brightness) {
     ledcWrite(CYD_TFT_BL, currentBrightness);
 }
 
+String DisplayManager::sanitizeText(const String& str) {
+    String result = "";
+    result.reserve(str.length());
+    for (size_t i = 0; i < str.length(); i++) {
+        uint8_t c = (uint8_t)str[i];
+        if (c == 0xC3 && i + 1 < str.length()) {
+            uint8_t c2 = (uint8_t)str[++i];
+            switch (c2) {
+                // Maiúsculas com acento
+                case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: result += 'A'; break; // À Á Â Ã Ä Å
+                case 0x87: result += 'C'; break; // Ç
+                case 0x88: case 0x89: case 0x8A: case 0x8B: result += 'E'; break; // È É Ê Ë
+                case 0x8C: case 0x8D: case 0x8E: case 0x8F: result += 'I'; break; // Ì Í Î Ï
+                case 0x91: result += 'N'; break; // Ñ
+                case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: result += 'O'; break; // Ò Ó Ô Õ Ö
+                case 0x99: case 0x9A: case 0x9B: case 0x9C: result += 'U'; break; // Ù Ú Û Ü
+                // Minúsculas com acento
+                case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: result += 'a'; break; // à á â ã ä å
+                case 0xA7: result += 'c'; break; // ç
+                case 0xA8: case 0xA9: case 0xAA: case 0xAB: result += 'e'; break; // è é ê ë
+                case 0xAC: case 0xAD: case 0xAE: case 0xAF: result += 'i'; break; // ì í î ï
+                case 0xB1: result += 'n'; break; // ñ
+                case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: result += 'o'; break; // ò ó ô õ ö
+                case 0xB9: case 0xBA: case 0xBB: case 0xBC: result += 'u'; break; // ù ú û ü
+                default: result += ' '; break;
+            }
+        } else if (c < 128) {
+            result += (char)c;
+        }
+    }
+    return result;
+}
+
 void DisplayManager::drawCard(int x, int y, int w, int h, const String& title) {
     tft.fillRoundRect(x, y, w, h, 8, COLOR_CARD_BG);
     tft.drawRoundRect(x, y, w, h, 8, COLOR_CARD_BORDER);
     if (title.length() > 0) {
         tft.setTextColor(COLOR_TEXT_MUTED, COLOR_CARD_BG);
         tft.setTextFont(1);
-        tft.drawString(title, x + 8, y + 6);
+        tft.drawString(sanitizeText(title), x + 8, y + 6);
     }
 }
 
@@ -59,10 +91,10 @@ void DisplayManager::drawWeatherIcon(int x, int y, int weatherCode, bool isDay, 
 void DisplayManager::drawHeader(const String& city, const String& timeStr, int wifiRssi, ScreenPage page) {
     tft.fillRect(0, 0, 240, 26, COLOR_BG);
 
-    // Cidade
+    // Cidade (Higienizada contra caracteres especiais que quebram fontes)
     tft.setTextColor(COLOR_TEXT_WHITE, COLOR_BG);
     tft.setTextFont(2);
-    tft.drawString(city, 8, 4);
+    tft.drawString(sanitizeText(city), 8, 4);
 
     // Hora
     tft.setTextColor(COLOR_CYAN, COLOR_BG);
@@ -88,13 +120,13 @@ void DisplayManager::drawLoadingScreen(const String& status) {
     tft.setTextColor(COLOR_TEXT_MUTED, COLOR_BG);
     tft.setTextFont(2);
     tft.drawCentreString("Estacao Meteorologica", 120, 140, 2);
-    tft.drawCentreString(status, 120, 180, 2);
+    tft.drawCentreString(sanitizeText(status), 120, 180, 2);
 }
 
 void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality& air) {
     tft.fillRect(0, 26, 240, 294, COLOR_BG);
 
-    // 1. Card Principal - Temperatura Atual & Condição
+    // 1. Card Principal
     drawCard(8, 30, 224, 90, "");
     drawWeatherIcon(42, 75, weather.weatherCode, weather.isDay, 2);
 
@@ -106,7 +138,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
 
     tft.setTextColor(COLOR_CYAN, COLOR_CARD_BG);
     tft.setTextFont(2);
-    tft.drawString(weather.weatherDesc, 80, 92);
+    tft.drawString(sanitizeText(weather.weatherDesc), 80, 92);
 
     char subStr[40];
     snprintf(subStr, sizeof(subStr), "Min %.0f*  Max %.0f*  Sens %.0f*", 
@@ -140,14 +172,14 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     drawCard(124, 186, 108, 54, "QUALID. AR");
     tft.setTextColor(air.levelColor, COLOR_CARD_BG);
     tft.setTextFont(2);
-    tft.drawString(air.levelDesc, 132, 208);
+    tft.drawString(sanitizeText(air.levelDesc), 132, 208);
 
     // 3. Card Dica do Dia
     drawCard(8, 246, 224, 52, "DICA DO DIA");
     String advice = WeatherService::getAdvice(weather, air);
     tft.setTextColor(COLOR_TEXT_WHITE, COLOR_CARD_BG);
     tft.setTextFont(1);
-    tft.drawString(advice, 16, 268);
+    tft.drawString(sanitizeText(advice), 16, 268);
 
     tft.setTextColor(COLOR_TEXT_MUTED, COLOR_BG);
     tft.drawCentreString("< Toque para navegar >", 120, 306, 1);
@@ -197,13 +229,13 @@ void DisplayManager::drawPageWeek(const std::vector<DailyForecast>& daily) {
 
         tft.setTextColor(COLOR_CYAN, COLOR_CARD_BG);
         tft.setTextFont(2);
-        tft.drawString(daily[i].dayName, 16, startY + i * 48 + 12);
+        tft.drawString(sanitizeText(daily[i].dayName), 16, startY + i * 48 + 12);
 
         drawWeatherIcon(80, startY + i * 48 + 22, daily[i].weatherCode, true, 1);
 
         tft.setTextColor(COLOR_TEXT_MUTED, COLOR_CARD_BG);
         tft.setTextFont(1);
-        tft.drawString(daily[i].weatherDesc, 105, startY + i * 48 + 8);
+        tft.drawString(sanitizeText(daily[i].weatherDesc), 105, startY + i * 48 + 8);
 
         char tempRange[20];
         snprintf(tempRange, sizeof(tempRange), "%.0f* / %.0f*", daily[i].tempMin, daily[i].tempMax);
@@ -225,7 +257,7 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.setTextColor(air.levelColor, COLOR_CARD_BG);
     tft.setTextFont(4);
     tft.drawString(aqiStr, 16, 76);
-    tft.drawString(air.levelDesc, 110, 76);
+    tft.drawString(sanitizeText(air.levelDesc), 110, 76);
 
     drawCard(8, 130, 108, 54, "PM 2.5");
     char pm25Str[16];
@@ -270,7 +302,7 @@ void DisplayManager::drawPageSettings(const AppSettings& settings, const String&
     drawCard(8, 120, 224, 60, "CIDADE CONFIGURADA");
     tft.setTextColor(COLOR_TEXT_WHITE, COLOR_CARD_BG);
     tft.setTextFont(2);
-    tft.drawString(settings.cityName, 16, 144);
+    tft.drawString(sanitizeText(settings.cityName), 16, 144);
 
     drawCard(8, 186, 224, 60, "BRILHO & MODO NOTURNO");
     char brStr[40];
@@ -283,5 +315,5 @@ void DisplayManager::drawPageSettings(const AppSettings& settings, const String&
     drawCard(8, 252, 224, 46, "VERSAO DO SOFTWARE");
     tft.setTextColor(COLOR_GREEN, COLOR_CARD_BG);
     tft.setTextFont(2);
-    tft.drawString("Atmos BR v1.0.0 (Open-Source)", 16, 268);
+    tft.drawString("Atmos BR v1.1.0 (Open-Source)", 16, 268);
 }
