@@ -107,6 +107,24 @@ String WebPortal::generateHTML() {
     html += "<h1>🌤️ Atmos BR</h1>";
     html += "<div class='badge'>Estacao Meteorologica CYD • Open-Source</div>";
 
+    // 0. PREVIEW AO VIVO DA TELA
+    html += "<div class='card'><h2>📱 Preview da Tela do CYD</h2>";
+    html += "<div style='display:flex;justify-content:center;'>";
+    html += "<div style='width:240px;height:320px;background:#0B0D15;border:2px solid #293047;border-radius:12px;padding:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);font-family:sans-serif;'>";
+    html += "<div style='display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;'><span>" + settings.cityName + "</span><span style='color:#00E5FF;'>12:00</span></div>";
+    html += "<div style='background:#171B2B;border:1px solid #293047;border-radius:8px;padding:8px;margin-bottom:6px;'>";
+    html += "<div style='font-size:28px;font-weight:bold;color:#fff;'>22°</div><div style='font-size:11px;color:#9AA3B8;'>Min 16° Max 26°</div><div style='font-size:12px;color:#00E5FF;'>Ceu Limpo</div></div>";
+    html += "<div style='display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;'>";
+    html += "<div style='background:#171B2B;border:1px solid #293047;border-radius:6px;padding:6px;font-size:10px;'><span style='color:#9AA3B8;'>VENTO</span><br><strong style='font-size:12px;color:#fff;'>12 km/h</strong></div>";
+    html += "<div style='background:#171B2B;border:1px solid #293047;border-radius:6px;padding:6px;font-size:10px;'><span style='color:#9AA3B8;'>UMIDADE</span><br><strong style='font-size:12px;color:#fff;'>75%</strong></div>";
+    html += "<div style='background:#171B2B;border:1px solid #293047;border-radius:6px;padding:6px;font-size:10px;'><span style='color:#9AA3B8;'>PRESSAO</span><br><strong style='font-size:12px;color:#fff;'>1018 hPa</strong></div>";
+    html += "<div style='background:#171B2B;border:1px solid #293047;border-radius:6px;padding:6px;font-size:10px;'><span style='color:#9AA3B8;'>AR</span><br><strong style='font-size:12px;color:#00E676;'>Excelente</strong></div>";
+    html += "</div>";
+    html += "<div style='background:#171B2B;border:1px solid #293047;border-radius:6px;padding:6px;font-size:9px;'><span style='color:#9AA3B8;'>DICA</span><br>Condicoes estaveis e agradaveis.</div>";
+    html += "<div style='text-align:center;font-size:9px;color:#9AA3B8;margin-top:6px;'>&lt; Toque para navegar &gt;</div>";
+    html += "</div></div></div>";
+
+
     // 1. CIDADE & LOCALIZAÇÃO
     html += "<form method='POST' action='/save-settings'>";
     html += "<div class='card'><h2>📍 Localizacao da Previsao</h2>";

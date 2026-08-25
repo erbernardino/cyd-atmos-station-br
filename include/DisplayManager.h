@@ -18,9 +18,6 @@ public:
     void drawPageSettings(const AppSettings& settings, const String& ip);
     void drawLoadingScreen(const String& status);
 
-    void drawCard(int x, int y, int w, int h, const String& title = "");
-    void drawWeatherIcon(int x, int y, int weatherCode, bool isDay, int size = 1);
-
     static String sanitizeText(const String& text);
 
 private:

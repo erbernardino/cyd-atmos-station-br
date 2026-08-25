@@ -7,17 +7,17 @@ void StorageManager::begin() {
 }
 
 void StorageManager::loadSettings(AppSettings& settings) {
-    settings.cityName = prefs.getString("city", "Sao Paulo");
-    settings.latitude = prefs.getFloat("lat", -23.5505f);
-    settings.longitude = prefs.getFloat("lon", -46.6333f);
+    settings.cityName = prefs.getString("city", "Santo Andre");
+    settings.latitude = prefs.getFloat("lat", -23.6639f);
+    settings.longitude = prefs.getFloat("lon", -46.5383f);
     settings.brightness = prefs.getInt("bright", 220);
     settings.ecoMode = prefs.getBool("eco", true);
     settings.ecoStartHour = prefs.getInt("eco_start", 23);
     settings.ecoEndHour = prefs.getInt("eco_end", 7);
     settings.ecoBrightness = prefs.getInt("eco_br", 40);
     settings.rgbLedEnabled = prefs.getBool("rgb", true);
+    settings.theme = prefs.getInt("theme", THEME_SWISS);
 
-    // Carrega redes Wi-Fi salvas
     settings.savedNetworks.clear();
     int count = prefs.getInt("wifi_count", 0);
     for (int i = 0; i < count; i++) {
@@ -30,8 +30,8 @@ void StorageManager::loadSettings(AppSettings& settings) {
         }
     }
 
-    Serial.printf("[Storage] Configuracoes carregadas. Redes Wi-Fi memorizadas: %d\n", 
-                  (int)settings.savedNetworks.size());
+    Serial.printf("[Storage] Configuracoes carregadas. Tema ativo: %d | Redes Wi-Fi: %d\n", 
+                  settings.theme, (int)settings.savedNetworks.size());
 }
 
 void StorageManager::saveSettings(const AppSettings& settings) {
@@ -44,8 +44,8 @@ void StorageManager::saveSettings(const AppSettings& settings) {
     prefs.putInt("eco_end", settings.ecoEndHour);
     prefs.putInt("eco_br", settings.ecoBrightness);
     prefs.putBool("rgb", settings.rgbLedEnabled);
+    prefs.putInt("theme", settings.theme);
 
-    // Salva redes Wi-Fi
     prefs.putInt("wifi_count", (int)settings.savedNetworks.size());
     for (size_t i = 0; i < settings.savedNetworks.size(); i++) {
         String sKey = "w_s_" + String(i);
@@ -54,13 +54,11 @@ void StorageManager::saveSettings(const AppSettings& settings) {
         prefs.putString(pKey.c_str(), settings.savedNetworks[i].password);
     }
 
-    Serial.println("[Storage] Configuracoes e redes salvas na memoria NVS.");
+    Serial.println("[Storage] Configuracoes salvas na memoria NVS.");
 }
 
 void StorageManager::addWifiNetwork(AppSettings& settings, const String& ssid, const String& pass) {
     if (ssid.length() == 0) return;
-    
-    // Verifica se já existe para atualizar a senha ou adiciona
     bool exists = false;
     for (auto& net : settings.savedNetworks) {
         if (net.ssid == ssid) {

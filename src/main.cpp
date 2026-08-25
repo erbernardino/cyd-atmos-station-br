@@ -28,7 +28,7 @@ std::vector<DailyForecast> dailyForecast;
 ScreenPage currentPage = PAGE_NOW;
 unsigned long lastWeatherUpdate = 0;
 unsigned long lastAirUpdate = 0;
-unsigned long lastClockUpdate = 0;
+unsigned long lastClockMinute = 99;
 const unsigned long WEATHER_INTERVAL = 15 * 60 * 1000; // 15 min
 const unsigned long AIR_INTERVAL     = 30 * 60 * 1000; // 30 min
 
@@ -64,7 +64,6 @@ String getFormattedTime() {
 }
 
 void refreshCurrentPage() {
-    display.drawHeader(settings.cityName, getFormattedTime(), WiFi.RSSI(), currentPage);
     switch (currentPage) {
         case PAGE_NOW:
             display.drawPageNow(currentWeather, airQuality);
@@ -104,15 +103,14 @@ void checkEcoMode() {
 void connectToWiFi() {
     display.drawLoadingScreen("Conectando ao Wi-Fi...");
     
-    // Registra todas as redes conhecidas no WiFiMulti
     for (const auto& net : settings.savedNetworks) {
         wifiMulti.addAP(net.ssid.c_str(), net.password.c_str());
-        Serial.printf("[Wi-Fi] Rede registrada no Multi-WiFi: %s\n", net.ssid.c_str());
+        Serial.printf("[Wi-Fi] Registrado: %s\n", net.ssid.c_str());
     }
 
     bool connected = false;
     if (!settings.savedNetworks.empty()) {
-        Serial.println("[Wi-Fi] Tentando conectar as redes memorizadas...");
+        Serial.println("[Wi-Fi] Tentando conectar as redes...");
         for (int i = 0; i < 15; i++) {
             if (wifiMulti.run() == WL_CONNECTED) {
                 connected = true;
@@ -123,32 +121,30 @@ void connectToWiFi() {
         }
     }
 
-    // Se nenhuma rede conhecida foi encontrada, abre o Portal Cativo de Configuração
     if (!connected) {
-        Serial.println("\n[Wi-Fi] Nenhuma rede conhecida alcancada. Abrindo portal Atmos-Setup...");
-        display.drawLoadingScreen("Abrindo AP: Atmos-Setup");
+        Serial.println("\n[Wi-Fi] Abrindo portal Atmos-Setup...");
+        display.drawLoadingScreen("Conecte no Wi-Fi: Atmos-Setup");
 
         WiFiManager wm;
         wm.setConfigPortalTimeout(180);
 
         if (!wm.autoConnect("Atmos-Setup", "12345678")) {
-            Serial.println("[Wi-Fi] Timeout no portal. Reiniciando...");
+            Serial.println("[Wi-Fi] Reiniciando...");
             ESP.restart();
         }
 
-        // Salva a nova rede conectada no banco de redes
         storage.addWifiNetwork(settings, WiFi.SSID(), WiFi.psk());
     }
 
-    Serial.println("\n[Wi-Fi] Conectado com sucesso! SSID: " + WiFi.SSID() + " IP: " + WiFi.localIP().toString());
+    Serial.println("\n[Wi-Fi] Conectado! IP: " + WiFi.localIP().toString());
 }
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n🚀 Iniciando Atmos BR - Estacao Meteorologica CYD");
+    Serial.println("\n🚀 Iniciando Atmos BR - Swiss Minimalist Edition");
 
     setupRGB();
-    setRGBColor(false, false, true); // Azul durante boot
+    setRGBColor(false, false, true);
 
     storage.begin();
     storage.loadSettings(settings);
@@ -157,14 +153,12 @@ void setup() {
     touch.init();
     
     connectToWiFi();
-
-    // Inicia o Servidor Web e Portal de Configuração na rede local
     webPortal.begin();
 
     display.drawLoadingScreen("Sincronizando relogio NTP...");
     configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
 
-    display.drawLoadingScreen("Obtendo previsao do tempo...");
+    display.drawLoadingScreen("Obtendo dados meteorologicos...");
     weatherService.updateWeatherData(settings.latitude, settings.longitude, 
                                      currentWeather, hourlyForecast, dailyForecast);
     weatherService.updateAirQuality(settings.latitude, settings.longitude, airQuality);
@@ -180,19 +174,23 @@ void setup() {
 }
 
 void loop() {
-    // 1. Processa requisições do Servidor Web
     webPortal.handleClient();
 
     unsigned long now = millis();
 
-    // 2. Atualização do Relógio (a cada 1s)
-    if (now - lastClockUpdate >= 1000) {
-        lastClockUpdate = now;
-        display.drawHeader(settings.cityName, getFormattedTime(), WiFi.RSSI(), currentPage);
-        checkEcoMode();
+    // 1. Atualiza tela a cada minuto (para atualizar o relógio)
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        if (timeinfo.tm_min != lastClockMinute) {
+            lastClockMinute = timeinfo.tm_min;
+            if (currentPage == PAGE_NOW) {
+                refreshCurrentPage();
+            }
+            checkEcoMode();
+        }
     }
 
-    // 3. Atualização Meteorológica (a cada 15 min)
+    // 2. Atualização Meteorológica (a cada 15 min)
     if (now - lastWeatherUpdate >= WEATHER_INTERVAL) {
         lastWeatherUpdate = now;
         weatherService.updateWeatherData(settings.latitude, settings.longitude, 
@@ -200,13 +198,13 @@ void loop() {
         refreshCurrentPage();
     }
 
-    // 4. Qualidade do Ar (a cada 30 min)
+    // 3. Qualidade do Ar (a cada 30 min)
     if (now - lastAirUpdate >= AIR_INTERVAL) {
         lastAirUpdate = now;
         weatherService.updateAirQuality(settings.latitude, settings.longitude, airQuality);
     }
 
-    // 5. Navegação Touch
+    // 4. Detecção de Toque
     if (touch.isTouched()) {
         currentPage = (ScreenPage)((currentPage + 1) % PAGE_COUNT);
         refreshCurrentPage();

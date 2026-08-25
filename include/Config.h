@@ -20,19 +20,31 @@
 #define CYD_LDR_PIN         34
 
 // ==========================================
-// 🎨 PALETA DE CORES
+// 🎨 PALETA DE CORES (Estilo Suíço / Dieter Rams)
 // ==========================================
-#define COLOR_BG            0x0842  // #0B0D15
-#define COLOR_CARD_BG       0x18E5  // #171B2B
-#define COLOR_CARD_BORDER   0x2969  // #293047
-#define COLOR_TEXT_WHITE    0xFFFF  // #FFFFFF
-#define COLOR_TEXT_MUTED    0x9CD3  // #9AA3B8
-#define COLOR_CYAN          0x073F  // #00E5FF
-#define COLOR_ORANGE        0xFB80  // #FF7000
-#define COLOR_YELLOW        0xFDE0  // #FFD600
-#define COLOR_GREEN         0x074A  // #00E676
-#define COLOR_RED           0xF945  // #FF2D55
-#define COLOR_BLUE          0x2CD9  // #2979FF
+#define SWISS_BG            0x0000  // #000000 - Preto Absoluto
+#define SWISS_CARD_BG       0x0842  // #0B0D15 - Cinza Carvão Suave
+#define SWISS_BORDER        0x39E7  // #3A3F50 - Linhas Hairline Finas
+#define SWISS_TEXT_WHITE    0xFFFF  // #FFFFFF - Branco Puro
+#define SWISS_TEXT_MUTED    0x9CD3  // #9AA3B8 - Cinza Médio
+#define SWISS_ORANGE        0xFB80  // #FF7000 - Acento Laranja Dieter Rams
+#define SWISS_GREEN         0x074A  // #00E676 - Status Bom
+#define SWISS_CYAN          0x073F  // #00E5FF - Ciano
+
+// Cores Legado
+#define COLOR_GREEN         0x074A
+#define COLOR_YELLOW        0xFDE0
+#define COLOR_ORANGE        0xFB80
+#define COLOR_RED           0xF945
+#define COLOR_CYAN          0x073F
+#define COLOR_BLUE          0x2CD9
+
+enum ThemeStyle {
+    THEME_SWISS = 0,
+    THEME_PIXEL,
+    THEME_NORDIC,
+    THEME_BENTO
+};
 
 // ==========================================
 // 📊 ESTRUTURAS DE DADOS
@@ -100,6 +112,7 @@ struct AppSettings {
     int ecoEndHour;
     int ecoBrightness;
     bool rgbLedEnabled;
+    int theme;
     std::vector<WifiCredential> savedNetworks;
 };
 
