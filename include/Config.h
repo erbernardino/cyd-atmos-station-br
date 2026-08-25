@@ -1,47 +1,47 @@
 #pragma once
 
 #include <Arduino.h>
+#include <vector>
 
 // ==========================================
 // 📌 PINAGEM DO HARDWARE - ESP32 CYD
 // ==========================================
 
-// Pinos do Display TFT (definidos via build_flags)
 #define CYD_TFT_BL          21
-
-// Pinos do Painel Touch (XPT2046 SPI)
 #define XPT2046_IRQ         36
 #define XPT2046_MOSI        32
 #define XPT2046_MISO        39
 #define XPT2046_CLK         25
 #define XPT2046_CS          33
 
-// Pinos do LED RGB integrado (Lógica Ativa Baixa)
 #define CYD_LED_RED         4
 #define CYD_LED_GREEN       16
 #define CYD_LED_BLUE        17
-
-// Sensor de Luz Ambiente (LDR)
 #define CYD_LDR_PIN         34
 
 // ==========================================
-// 🎨 PALETA DE CORES (Tema Moderno Escuro)
+// 🎨 PALETA DE CORES
 // ==========================================
-#define COLOR_BG            0x0842  // #0B0D15 - Fundo Geral
-#define COLOR_CARD_BG       0x18E5  // #171B2B - Fundo dos Cards
-#define COLOR_CARD_BORDER   0x2969  // #293047 - Borda dos Cards
-#define COLOR_TEXT_WHITE    0xFFFF  // #FFFFFF - Texto Principal
-#define COLOR_TEXT_MUTED    0x9CD3  // #9AA3B8 - Texto Secundário
-#define COLOR_CYAN          0x073F  // #00E5FF - Destaques
-#define COLOR_ORANGE        0xFB80  // #FF7000 - Temperatura Alta
-#define COLOR_YELLOW        0xFDE0  // #FFD600 - Alertas
-#define COLOR_GREEN         0x074A  // #00E676 - Status Bom
-#define COLOR_RED           0xF945  // #FF2D55 - Alertas Críticos
-#define COLOR_BLUE          0x2CD9  // #2979FF - Chuva / Vento
+#define COLOR_BG            0x0842  // #0B0D15
+#define COLOR_CARD_BG       0x18E5  // #171B2B
+#define COLOR_CARD_BORDER   0x2969  // #293047
+#define COLOR_TEXT_WHITE    0xFFFF  // #FFFFFF
+#define COLOR_TEXT_MUTED    0x9CD3  // #9AA3B8
+#define COLOR_CYAN          0x073F  // #00E5FF
+#define COLOR_ORANGE        0xFB80  // #FF7000
+#define COLOR_YELLOW        0xFDE0  // #FFD600
+#define COLOR_GREEN         0x074A  // #00E676
+#define COLOR_RED           0xF945  // #FF2D55
+#define COLOR_BLUE          0x2CD9  // #2979FF
 
 // ==========================================
-// 📊 ESTRUTURAS DE DADOS METEOROLÓGICOS
+// 📊 ESTRUTURAS DE DADOS
 // ==========================================
+
+struct WifiCredential {
+    String ssid;
+    String password;
+};
 
 struct CurrentWeather {
     float temperature;
@@ -100,6 +100,7 @@ struct AppSettings {
     int ecoEndHour;
     int ecoBrightness;
     bool rgbLedEnabled;
+    std::vector<WifiCredential> savedNetworks;
 };
 
 enum ScreenPage {

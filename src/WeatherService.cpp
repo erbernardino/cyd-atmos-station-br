@@ -63,16 +63,16 @@ bool WeatherService::updateWeatherData(float lat, float lon, CurrentWeather& cur
                                        std::vector<HourlyForecast>& hourly, 
                                        std::vector<DailyForecast>& daily) {
     WiFiClientSecure client;
-    client.setInsecure(); // Sem necessidade de certificados raiz pesados
+    client.setInsecure();
 
     HTTPClient http;
-    char url[380];
+    char url[512];
     snprintf(url, sizeof(url),
         "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=temperature_2m,relative_humidity_2m,apparent_temperature,dew_point_2m,precipitation,weather_code,pressure_msl,cloud_cover,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max&forecast_hours=12&forecast_days=7&timezone=auto",
         lat, lon);
 
     http.begin(client, url);
-    http.setTimeout(8000);
+    http.setTimeout(10000);
     int httpCode = http.GET();
 
     if (httpCode != HTTP_CODE_OK) {
@@ -81,10 +81,11 @@ bool WeatherService::updateWeatherData(float lat, float lon, CurrentWeather& cur
         return false;
     }
 
-    // JSON Parser
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, http.getStream());
+    String payload = http.getString();
     http.end();
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload);
 
     if (error) {
         Serial.printf("[Weather] Erro JSON: %s\n", error.c_str());
@@ -97,6 +98,7 @@ bool WeatherService::updateWeatherData(float lat, float lon, CurrentWeather& cur
     current.apparentTemperature = cur["apparent_temperature"] | current.temperature;
     current.humidity = cur["relative_humidity_2m"] | 0;
     current.pressure = cur["pressure_msl"] | 1013.0f;
+    current.precipitation = cur["precipitation"] | 0.0f;
     current.windSpeed = cur["wind_speed_10m"] | 0.0f;
     current.windGusts = cur["wind_gusts_10m"] | current.windSpeed;
     current.windDirection = cur["wind_direction_10m"] | 0;
@@ -125,9 +127,7 @@ bool WeatherService::updateWeatherData(float lat, float lon, CurrentWeather& cur
     daily.clear();
     for (size_t i = 0; i < d_time.size() && i < 7; i++) {
         DailyForecast df;
-        const char* dateStr = d_time[i]; // "YYYY-MM-DD"
-        // Cálculo simples do dia da semana a partir do índice (0 = hoje)
-        df.dayName = (i == 0) ? "HOJE" : String(i); 
+        df.dayName = (i == 0) ? "HOJE" : ("D+" + String(i));
         df.tempMax = d_tmax[i] | 0.0f;
         df.tempMin = d_tmin[i] | 0.0f;
         df.rainProbability = d_rain[i] | 0;
@@ -152,7 +152,7 @@ bool WeatherService::updateWeatherData(float lat, float lon, CurrentWeather& cur
         hourly.push_back(hf);
     }
 
-    Serial.println("[Weather] Dados meteorológicos atualizados com sucesso!");
+    Serial.println("[Weather] Dados meteorologicos atualizados com sucesso!");
     return true;
 }
 
@@ -161,13 +161,13 @@ bool WeatherService::updateAirQuality(float lat, float lon, AirQuality& air) {
     client.setInsecure();
 
     HTTPClient http;
-    char url[280];
+    char url[512];
     snprintf(url, sizeof(url),
         "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=european_aqi,pm2_5,pm10,ozone,dust&timezone=auto",
         lat, lon);
 
     http.begin(client, url);
-    http.setTimeout(8000);
+    http.setTimeout(10000);
     int httpCode = http.GET();
 
     if (httpCode != HTTP_CODE_OK) {
@@ -175,9 +175,11 @@ bool WeatherService::updateAirQuality(float lat, float lon, AirQuality& air) {
         return false;
     }
 
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, http.getStream());
+    String payload = http.getString();
     http.end();
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload);
 
     if (error) return false;
 

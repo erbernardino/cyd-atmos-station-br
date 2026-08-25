@@ -1,47 +1,41 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <WiFiManager.h>
 #include <time.h>
 #include "Config.h"
+#include "StorageManager.h"
 #include "WeatherService.h"
 #include "DisplayManager.h"
 #include "TouchHandler.h"
+#include "WebPortal.h"
 
-// Instâncias dos Serviços
+// Instâncias
+StorageManager storage;
 DisplayManager display;
 TouchHandler touch;
 WeatherService weatherService;
+AppSettings settings;
+WebPortal webPortal(settings, storage);
+WiFiMulti wifiMulti;
 
-// Estado da Aplicação
+// Estado
 CurrentWeather currentWeather;
 AirQuality airQuality;
 std::vector<HourlyForecast> hourlyForecast;
 std::vector<DailyForecast> dailyForecast;
 
-AppSettings settings = {
-    .cityName = "Sao Paulo",
-    .latitude = -23.5505f,
-    .longitude = -46.6333f,
-    .brightness = 220,
-    .ecoMode = true,
-    .ecoStartHour = 23,
-    .ecoEndHour = 7,
-    .ecoBrightness = 40,
-    .rgbLedEnabled = true
-};
-
 ScreenPage currentPage = PAGE_NOW;
 unsigned long lastWeatherUpdate = 0;
 unsigned long lastAirUpdate = 0;
 unsigned long lastClockUpdate = 0;
-const unsigned long WEATHER_INTERVAL = 15 * 60 * 1000; // 15 minutos
-const unsigned long AIR_INTERVAL     = 30 * 60 * 1000; // 30 minutos
+const unsigned long WEATHER_INTERVAL = 15 * 60 * 1000; // 15 min
+const unsigned long AIR_INTERVAL     = 30 * 60 * 1000; // 30 min
 
 void setupRGB() {
     pinMode(CYD_LED_RED, OUTPUT);
     pinMode(CYD_LED_GREEN, OUTPUT);
     pinMode(CYD_LED_BLUE, OUTPUT);
-    // Desliga todos inicialmente (Lógica Ativa Baixa)
     digitalWrite(CYD_LED_RED, HIGH);
     digitalWrite(CYD_LED_GREEN, HIGH);
     digitalWrite(CYD_LED_BLUE, HIGH);
@@ -107,6 +101,48 @@ void checkEcoMode() {
     }
 }
 
+void connectToWiFi() {
+    display.drawLoadingScreen("Conectando ao Wi-Fi...");
+    
+    // Registra todas as redes conhecidas no WiFiMulti
+    for (const auto& net : settings.savedNetworks) {
+        wifiMulti.addAP(net.ssid.c_str(), net.password.c_str());
+        Serial.printf("[Wi-Fi] Rede registrada no Multi-WiFi: %s\n", net.ssid.c_str());
+    }
+
+    bool connected = false;
+    if (!settings.savedNetworks.empty()) {
+        Serial.println("[Wi-Fi] Tentando conectar as redes memorizadas...");
+        for (int i = 0; i < 15; i++) {
+            if (wifiMulti.run() == WL_CONNECTED) {
+                connected = true;
+                break;
+            }
+            delay(500);
+            Serial.print(".");
+        }
+    }
+
+    // Se nenhuma rede conhecida foi encontrada, abre o Portal Cativo de Configuração
+    if (!connected) {
+        Serial.println("\n[Wi-Fi] Nenhuma rede conhecida alcancada. Abrindo portal Atmos-Setup...");
+        display.drawLoadingScreen("Abrindo AP: Atmos-Setup");
+
+        WiFiManager wm;
+        wm.setConfigPortalTimeout(180);
+
+        if (!wm.autoConnect("Atmos-Setup", "12345678")) {
+            Serial.println("[Wi-Fi] Timeout no portal. Reiniciando...");
+            ESP.restart();
+        }
+
+        // Salva a nova rede conectada no banco de redes
+        storage.addWifiNetwork(settings, WiFi.SSID(), WiFi.psk());
+    }
+
+    Serial.println("\n[Wi-Fi] Conectado com sucesso! SSID: " + WiFi.SSID() + " IP: " + WiFi.localIP().toString());
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("\n🚀 Iniciando Atmos BR - Estacao Meteorologica CYD");
@@ -114,25 +150,18 @@ void setup() {
     setupRGB();
     setRGBColor(false, false, true); // Azul durante boot
 
+    storage.begin();
+    storage.loadSettings(settings);
+
     display.init();
     touch.init();
-    display.drawLoadingScreen("Conectando ao Wi-Fi...");
+    
+    connectToWiFi();
 
-    // Gerenciador de Wi-Fi Inteligente com Portal Cativo
-    WiFiManager wm;
-    wm.setConfigPortalTimeout(180);
+    // Inicia o Servidor Web e Portal de Configuração na rede local
+    webPortal.begin();
 
-    if (!wm.autoConnect("Atmos-Setup", "12345678")) {
-        Serial.println("[Wi-Fi] Falha na conexao. Reiniciando...");
-        display.drawLoadingScreen("Falha no Wi-Fi. Reiniciando...");
-        delay(3000);
-        ESP.restart();
-    }
-
-    Serial.println("[Wi-Fi] Conectado! IP: " + WiFi.localIP().toString());
     display.drawLoadingScreen("Sincronizando relogio NTP...");
-
-    // Fuso Horário de Brasília (UTC-3)
     configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
 
     display.drawLoadingScreen("Obtendo previsao do tempo...");
@@ -143,44 +172,45 @@ void setup() {
     lastWeatherUpdate = millis();
     lastAirUpdate = millis();
 
-    setRGBColor(false, true, false); // Verde: Conectado e operando
-    delay(500);
-    setRGBColor(false, false, false); // Apaga para não incomodar
+    setRGBColor(false, true, false);
+    delay(400);
+    setRGBColor(false, false, false);
 
     refreshCurrentPage();
 }
 
 void loop() {
+    // 1. Processa requisições do Servidor Web
+    webPortal.handleClient();
+
     unsigned long now = millis();
 
-    // 1. Atualização do Relógio (a cada segundo)
+    // 2. Atualização do Relógio (a cada 1s)
     if (now - lastClockUpdate >= 1000) {
         lastClockUpdate = now;
         display.drawHeader(settings.cityName, getFormattedTime(), WiFi.RSSI(), currentPage);
         checkEcoMode();
     }
 
-    // 2. Atualização Meteorológica (a cada 15 min)
+    // 3. Atualização Meteorológica (a cada 15 min)
     if (now - lastWeatherUpdate >= WEATHER_INTERVAL) {
         lastWeatherUpdate = now;
-        Serial.println("[Loop] Atualizando clima...");
         weatherService.updateWeatherData(settings.latitude, settings.longitude, 
                                          currentWeather, hourlyForecast, dailyForecast);
         refreshCurrentPage();
     }
 
-    // 3. Atualização da Qualidade do Ar (a cada 30 min)
+    // 4. Qualidade do Ar (a cada 30 min)
     if (now - lastAirUpdate >= AIR_INTERVAL) {
         lastAirUpdate = now;
         weatherService.updateAirQuality(settings.latitude, settings.longitude, airQuality);
     }
 
-    // 4. Detecção de Toque na Tela Touch
+    // 5. Navegação Touch
     if (touch.isTouched()) {
         currentPage = (ScreenPage)((currentPage + 1) % PAGE_COUNT);
-        Serial.printf("[Touch] Mudando para a pagina %d\n", (int)currentPage);
         refreshCurrentPage();
     }
 
-    delay(20);
+    delay(10);
 }
