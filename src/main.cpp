@@ -64,6 +64,7 @@ String getFormattedTime() {
 }
 
 void refreshCurrentPage() {
+    display.setTheme(settings.theme);
     switch (currentPage) {
         case PAGE_NOW:
             display.drawPageNow(currentWeather, airQuality);
@@ -83,6 +84,20 @@ void refreshCurrentPage() {
         default:
             break;
     }
+}
+
+void updateWeatherLED() {
+    if (!settings.rgbLedEnabled) {
+        setRGBColor(false, false, false);
+        return;
+    }
+    int code = currentWeather.weatherCode;
+    if (code >= 95) setRGBColor(true, false, false);              // Tempestade: vermelho
+    else if (code >= 51 && code <= 82) setRGBColor(false, false, true); // Chuva: azul
+    else if (code >= 45 && code <= 48) setRGBColor(false, true, true);  // Nevoeiro: ciano
+    else if (code >= 2 && code <= 3) setRGBColor(true, true, true);     // Nublado: branco
+    else if (!currentWeather.isDay) setRGBColor(false, false, true);    // Ceu limpo a noite: azul suave
+    else setRGBColor(true, true, false);                                // Ceu limpo de dia: amarelo
 }
 
 void checkEcoMode() {
@@ -168,7 +183,7 @@ void setup() {
 
     setRGBColor(false, true, false);
     delay(400);
-    setRGBColor(false, false, false);
+    updateWeatherLED();
 
     refreshCurrentPage();
 }
@@ -187,14 +202,16 @@ void loop() {
                 refreshCurrentPage();
             }
             checkEcoMode();
+            updateWeatherLED();
         }
     }
 
     // 2. Atualização Meteorológica (a cada 15 min)
     if (now - lastWeatherUpdate >= WEATHER_INTERVAL) {
         lastWeatherUpdate = now;
-        weatherService.updateWeatherData(settings.latitude, settings.longitude, 
+        weatherService.updateWeatherData(settings.latitude, settings.longitude,
                                          currentWeather, hourlyForecast, dailyForecast);
+        updateWeatherLED();
         refreshCurrentPage();
     }
 
@@ -208,12 +225,23 @@ void loop() {
     if (touch.isTouched()) {
         int tx, ty;
         bool gotCoords = touch.getTouchCoordinates(tx, ty);
+        Serial.printf("[Touch] Coordenadas mapeadas: X=%d Y=%d (zona settings: X %d-%d, Y %d-%d)\n",
+                      tx, ty, SETTINGS_TAP_X1, SETTINGS_TAP_X2, SETTINGS_TAP_Y1, SETTINGS_TAP_Y2);
         bool tappedSettings = gotCoords &&
             tx >= SETTINGS_TAP_X1 && tx <= SETTINGS_TAP_X2 &&
             ty >= SETTINGS_TAP_Y1 && ty <= SETTINGS_TAP_Y2 &&
             currentPage != PAGE_SETTINGS;
 
-        currentPage = tappedSettings ? PAGE_SETTINGS : (ScreenPage)((currentPage + 1) % PAGE_COUNT);
+        bool tappedTheme = gotCoords && currentPage == PAGE_SETTINGS &&
+            tx >= THEME_TAP_X1 && tx <= THEME_TAP_X2 &&
+            ty >= THEME_TAP_Y1 && ty <= THEME_TAP_Y2;
+
+        if (tappedTheme) {
+            settings.theme = (settings.theme + 1) % THEME_COUNT_IMPLEMENTED;
+            storage.saveSettings(settings);
+        } else {
+            currentPage = tappedSettings ? PAGE_SETTINGS : (ScreenPage)((currentPage + 1) % PAGE_COUNT);
+        }
         refreshCurrentPage();
     }
 

@@ -45,6 +45,22 @@ enum ThemeStyle {
     THEME_NORDIC,
     THEME_BENTO
 };
+#define THEME_COUNT_IMPLEMENTED 2  // Swiss e Pixel implementados; Nordic/Bento ainda nao
+
+// ==========================================
+// 🎮 PALETA DE CORES (Estilo Pixel Art / Retro)
+// ==========================================
+#define PIXEL_SKY_TOP       0x0885  // #081228 - Azul Noite Escuro
+#define PIXEL_SKY_BOTTOM    0x19C9  // #1B3A4B - Teal Profundo
+#define PIXEL_BG            0x0885  // #081228 - Fundo solido (paginas sem gradiente)
+#define PIXEL_CARD_BG       0x1107  // #10233A - Card Escuro
+#define PIXEL_BORDER        0x29C9  // #2C3A4B - Contorno
+#define PIXEL_TEXT          0xFF3B  // #FBE7D8 - Creme
+#define PIXEL_MUTED         0xADD8  // #A9B8C2 - Cinza Azulado
+#define PIXEL_AMBER         0xFB40  // #FF6800 - Acento Amber
+#define PIXEL_MOON          0xFF3B  // #FBE7D8 - Creme (lua)
+#define PIXEL_CLOUD         0x8CD5  // #8C9AA9 - Nuvem Cinza-Azulada
+#define PIXEL_GREEN         0x2731  // #24E68A - Status Bom
 
 // ==========================================
 // 📊 ESTRUTURAS DE DADOS
@@ -121,6 +137,12 @@ struct AppSettings {
 #define SETTINGS_TAP_Y1     6
 #define SETTINGS_TAP_X2     234
 #define SETTINGS_TAP_Y2     30
+
+// Zona de toque do botao "Proximo Estilo" (somente ativo dentro de PAGE_SETTINGS)
+#define THEME_TAP_X1        12
+#define THEME_TAP_Y1        176
+#define THEME_TAP_X2        228
+#define THEME_TAP_Y2         208
 
 enum ScreenPage {
     PAGE_NOW = 0,

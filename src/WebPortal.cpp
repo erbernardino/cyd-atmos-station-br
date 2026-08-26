@@ -35,6 +35,7 @@ void WebPortal::handleSaveSettings() {
     if (server.hasArg("eco_end")) settings.ecoEndHour = server.arg("eco_end").toInt();
     if (server.hasArg("eco_br")) settings.ecoBrightness = server.arg("eco_br").toInt();
     if (server.hasArg("rgb")) settings.rgbLedEnabled = (server.arg("rgb") == "1");
+    if (server.hasArg("theme")) settings.theme = server.arg("theme").toInt();
 
     storage.saveSettings(settings);
     server.sendHeader("Location", "/");
@@ -139,6 +140,10 @@ String WebPortal::generateHTML() {
 
     // 2. DISPLAY & MODO NOTURNO
     html += "<div class='card'><h2>💡 Display & Modo Noturno</h2>";
+    html += "<label>Estilo Visual da Tela:</label><select name='theme'>";
+    html += "<option value='0'" + String(settings.theme == 0 ? " selected" : "") + ">Swiss Minimalist (Dieter Rams)</option>";
+    html += "<option value='1'" + String(settings.theme == 1 ? " selected" : "") + ">Pixel Art (Retro)</option>";
+    html += "</select>";
     html += "<label>Brilho Diurno (20 a 255):</label><input type='range' min='20' max='255' name='brightness' value='" + String(settings.brightness) + "'>";
     html += "<div class='row' style='margin-top:10px;'>";
     html += "<div><label>Modo Noturno (Eco):</label><select name='eco'><option value='1'" + String(settings.ecoMode ? " selected" : "") + ">Ativado</option><option value='0'" + String(!settings.ecoMode ? " selected" : "") + ">Desativado</option></select></div>";

@@ -9,6 +9,7 @@ public:
     DisplayManager();
     void init();
     void setBrightness(uint8_t brightness);
+    void setTheme(int theme);
 
     void drawHeader(const String& city, const String& timeStr, int wifiRssi, ScreenPage page);
     void drawPageNow(const CurrentWeather& weather, const AirQuality& air);
@@ -24,4 +25,9 @@ public:
 private:
     TFT_eSPI tft;
     uint8_t currentBrightness;
+    int activeTheme;
+
+    bool isPixel() const { return activeTheme == THEME_PIXEL; }
+    void drawSkyGradient(int y0, int y1, uint16_t top, uint16_t bottom);
+    void drawPixelIcon(int x, int y, int weatherCode, bool isDay, int size);
 };

@@ -36,7 +36,8 @@ bool TouchHandler::getTouchCoordinates(int& x, int& y) {
     
     if (p.z < 600) return false;
 
-    x = map(p.x, 200, 3800, 0, 240);
+    // Eixo X do painel resistivo e fisicamente invertido em relacao a tela neste board (CYD)
+    x = map(p.x, 3800, 200, 0, 240);
     y = map(p.y, 200, 3800, 0, 320);
     x = constrain(x, 0, 240);
     y = constrain(y, 0, 320);
