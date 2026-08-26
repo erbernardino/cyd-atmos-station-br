@@ -116,6 +116,12 @@ struct AppSettings {
     std::vector<WifiCredential> savedNetworks;
 };
 
+// Zona de toque fixa (canto superior direito) que pula direto para PAGE_SETTINGS
+#define SETTINGS_TAP_X1     204
+#define SETTINGS_TAP_Y1     6
+#define SETTINGS_TAP_X2     234
+#define SETTINGS_TAP_Y2     30
+
 enum ScreenPage {
     PAGE_NOW = 0,
     PAGE_HOURLY,

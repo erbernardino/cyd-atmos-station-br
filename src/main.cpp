@@ -206,7 +206,14 @@ void loop() {
 
     // 4. Detecção de Toque
     if (touch.isTouched()) {
-        currentPage = (ScreenPage)((currentPage + 1) % PAGE_COUNT);
+        int tx, ty;
+        bool gotCoords = touch.getTouchCoordinates(tx, ty);
+        bool tappedSettings = gotCoords &&
+            tx >= SETTINGS_TAP_X1 && tx <= SETTINGS_TAP_X2 &&
+            ty >= SETTINGS_TAP_Y1 && ty <= SETTINGS_TAP_Y2 &&
+            currentPage != PAGE_SETTINGS;
+
+        currentPage = tappedSettings ? PAGE_SETTINGS : (ScreenPage)((currentPage + 1) % PAGE_COUNT);
         refreshCurrentPage();
     }
 

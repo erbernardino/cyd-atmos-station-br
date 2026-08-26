@@ -19,6 +19,7 @@ public:
     void drawLoadingScreen(const String& status);
 
     static String sanitizeText(const String& text);
+    void drawSettingsButton();
 
 private:
     TFT_eSPI tft;

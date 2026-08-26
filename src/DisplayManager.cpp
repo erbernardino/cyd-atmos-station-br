@@ -6,6 +6,9 @@ DisplayManager::DisplayManager() : currentBrightness(220) {}
 void DisplayManager::init() {
     tft.init();
     tft.setRotation(0); // 240x320 vertical
+    
+    // CORREÇÃO CRÍTICA DO PAINEL CYD: Inverte cores para Preto Real (#000000) e Cores Fiéis
+    tft.invertDisplay(true);
     tft.fillScreen(SWISS_BG);
 
     ledcAttach(CYD_TFT_BL, 5000, 8);
@@ -48,8 +51,14 @@ String DisplayManager::sanitizeText(const String& str) {
     return result;
 }
 
-void DisplayManager::drawHeader(const String& city, const String& timeStr, int wifiRssi, ScreenPage page) {
-    // No Estilo Suíço o cabeçalho é integrado harmonicamente na página
+void DisplayManager::drawHeader(const String& city, const String& timeStr, int wifiRssi, ScreenPage page) {}
+
+void DisplayManager::drawSettingsButton() {
+    int cx = (SETTINGS_TAP_X1 + SETTINGS_TAP_X2) / 2;
+    int cy = (SETTINGS_TAP_Y1 + SETTINGS_TAP_Y2) / 2;
+    tft.fillCircle(cx, cy - 5, 1, SWISS_TEXT_MUTED);
+    tft.fillCircle(cx, cy, 1, SWISS_TEXT_MUTED);
+    tft.fillCircle(cx, cy + 5, 1, SWISS_TEXT_MUTED);
 }
 
 void DisplayManager::drawLoadingScreen(const String& status) {
@@ -66,9 +75,6 @@ void DisplayManager::drawLoadingScreen(const String& status) {
     tft.drawCentreString(sanitizeText(status), 120, 190, 2);
 }
 
-// =========================================================================
-// 🇨🇭 ESTILO 5: SWISS / DIETER RAMS MINIMALIST (TELA PRINCIPAL)
-// =========================================================================
 void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality& air) {
     tft.fillScreen(SWISS_BG);
 
@@ -78,7 +84,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     
     tft.setTextColor(SWISS_TEXT_WHITE, SWISS_BG);
     tft.setTextFont(4);
-    tft.setTextSize(2); // Fonte grande limpa Helvetica (52px)
+    tft.setTextSize(2);
     
     int tWidth = tft.textWidth(tempBuf, 4) * 2;
     int startX = (240 - tWidth - 14) / 2;
@@ -88,8 +94,8 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.drawCircle(startX + tWidth + 8, 24, 4, SWISS_TEXT_WHITE);
     tft.drawCircle(startX + tWidth + 8, 24, 3, SWISS_TEXT_WHITE);
 
-    // Reseta escala de texto
     tft.setTextSize(1);
+    drawSettingsButton();
 
     // 2. ACENTO LARANJA DIETER RAMS
     tft.fillCircle(120, 74, 3, SWISS_ORANGE);
@@ -101,7 +107,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     cityUpper.toUpperCase();
     tft.drawCentreString(cityUpper, 120, 84, 2);
 
-    // 4. HORA ATUAL & CONDIÇÃO
+    // 4. HORA ATUAL & FAIXA DE TEMPERATURA
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(2);
     char subInfo[32];
@@ -120,9 +126,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.drawFastHLine(12, 290, 216, SWISS_BORDER);
     tft.drawFastVLine(120, 142, 148, SWISS_BORDER);
 
-    // ==========================================
-    // QUADRANTE 1: VENTO (Top-Left)
-    // ==========================================
+    // QUADRANTE 1: VENTO
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("VENTO", 20, 154);
@@ -133,9 +137,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.setTextFont(2);
     tft.drawString(windBuf, 20, 178);
 
-    // ==========================================
-    // QUADRANTE 2: UMIDADE (Top-Right)
-    // ==========================================
+    // QUADRANTE 2: UMIDADE
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("UMIDADE", 132, 154);
@@ -146,9 +148,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.setTextFont(2);
     tft.drawString(humBuf, 132, 178);
 
-    // ==========================================
-    // QUADRANTE 3: PRESSÃO (Bottom-Left)
-    // ==========================================
+    // QUADRANTE 3: PRESSÃO
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("PRESSAO", 20, 228);
@@ -159,9 +159,7 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.setTextFont(2);
     tft.drawString(pressBuf, 20, 252);
 
-    // ==========================================
-    // QUADRANTE 4: QUALIDADE DO AR (Bottom-Right)
-    // ==========================================
+    // QUADRANTE 4: QUALIDADE DO AR
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("QUALIDADE AR", 132, 228);
@@ -172,20 +170,14 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.setTextFont(2);
     tft.drawString(aqiText, 132, 252);
 
-    // 6. BARRA INFERIOR / PAGINAÇÃO
+    // BARRA INFERIOR / PAGINAÇÃO
     int dotX = 100;
     for (int i = 0; i < PAGE_COUNT; i++) {
-        if (i == 0) {
-            tft.fillCircle(dotX + i * 10, 304, 2, SWISS_ORANGE);
-        } else {
-            tft.drawCircle(dotX + i * 10, 304, 1, SWISS_BORDER);
-        }
+        if (i == 0) tft.fillCircle(dotX + i * 10, 304, 2, SWISS_ORANGE);
+        else tft.drawCircle(dotX + i * 10, 304, 1, SWISS_BORDER);
     }
 }
 
-// =========================================================================
-// 🇨🇭 TELA 2: PREVISÃO HORÁRIA (SWISS STYLE)
-// =========================================================================
 void DisplayManager::drawPageHourly(const std::vector<HourlyForecast>& hourly) {
     tft.fillScreen(SWISS_BG);
     
@@ -193,6 +185,7 @@ void DisplayManager::drawPageHourly(const std::vector<HourlyForecast>& hourly) {
     tft.setTextFont(2);
     tft.drawCentreString("PREVISAO POR HORA", 120, 14, 2);
     tft.drawFastHLine(12, 38, 216, SWISS_BORDER);
+    drawSettingsButton();
 
     int startY = 48;
     for (size_t i = 0; i < hourly.size() && i < 4; i++) {
@@ -219,7 +212,6 @@ void DisplayManager::drawPageHourly(const std::vector<HourlyForecast>& hourly) {
         tft.drawFastHLine(12, y + 46, 216, SWISS_BORDER);
     }
 
-    // Paginação
     int dotX = 100;
     for (int i = 0; i < PAGE_COUNT; i++) {
         if (i == 1) tft.fillCircle(dotX + i * 10, 304, 2, SWISS_ORANGE);
@@ -227,9 +219,6 @@ void DisplayManager::drawPageHourly(const std::vector<HourlyForecast>& hourly) {
     }
 }
 
-// =========================================================================
-// 🇨🇭 TELA 3: PREVISÃO 7 DIAS (SWISS STYLE)
-// =========================================================================
 void DisplayManager::drawPageWeek(const std::vector<DailyForecast>& daily) {
     tft.fillScreen(SWISS_BG);
 
@@ -237,6 +226,7 @@ void DisplayManager::drawPageWeek(const std::vector<DailyForecast>& daily) {
     tft.setTextFont(2);
     tft.drawCentreString("PREVISAO DE 7 DIAS", 120, 14, 2);
     tft.drawFastHLine(12, 38, 216, SWISS_BORDER);
+    drawSettingsButton();
 
     int startY = 46;
     for (size_t i = 0; i < daily.size() && i < 5; i++) {
@@ -266,9 +256,6 @@ void DisplayManager::drawPageWeek(const std::vector<DailyForecast>& daily) {
     }
 }
 
-// =========================================================================
-// 🇨🇭 TELA 4: QUALIDADE DO AR (SWISS STYLE)
-// =========================================================================
 void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& current) {
     tft.fillScreen(SWISS_BG);
 
@@ -276,8 +263,8 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.setTextFont(2);
     tft.drawCentreString("QUALIDADE DO AR", 120, 14, 2);
     tft.drawFastHLine(12, 38, 216, SWISS_BORDER);
+    drawSettingsButton();
 
-    // AQI Central
     char aqiBuf[16];
     snprintf(aqiBuf, sizeof(aqiBuf), "AQI %d", air.aqi);
     tft.setTextColor(air.levelColor, SWISS_BG);
@@ -295,7 +282,6 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.drawFastHLine(12, 274, 216, SWISS_BORDER);
     tft.drawFastVLine(120, 114, 160, SWISS_BORDER);
 
-    // PM2.5
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("PM 2.5", 20, 126);
@@ -305,7 +291,6 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.setTextFont(2);
     tft.drawString(pm25, 20, 150);
 
-    // PM10
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("PM 10", 132, 126);
@@ -315,7 +300,6 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.setTextFont(2);
     tft.drawString(pm10, 132, 150);
 
-    // OZONIO
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("OZONIO", 20, 206);
@@ -325,7 +309,6 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.setTextFont(2);
     tft.drawString(oz, 20, 230);
 
-    // INDICE UV
     tft.setTextColor(SWISS_TEXT_MUTED, SWISS_BG);
     tft.setTextFont(1);
     tft.drawString("INDICE UV", 132, 206);
@@ -342,9 +325,6 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     }
 }
 
-// =========================================================================
-// 🇨🇭 TELA 5: AJUSTES / STATUS (SWISS STYLE)
-// =========================================================================
 void DisplayManager::drawPageSettings(const AppSettings& settings, const String& ip) {
     tft.fillScreen(SWISS_BG);
 
