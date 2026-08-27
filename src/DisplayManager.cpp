@@ -96,6 +96,12 @@ String DisplayManager::sanitizeText(const String& str) {
     return result;
 }
 
+void DisplayManager::flashTouch(int x, int y) {
+    uint16_t color = isPixel() ? PIXEL_AMBER : SWISS_ORANGE;
+    tft.fillCircle(x, y, 12, color);
+    delay(80);
+}
+
 void DisplayManager::drawStat(int x, int labelY, int valueY, const String& label, const String& value, uint16_t valueColor, uint16_t labelColor, uint16_t bg) {
     tft.setTextColor(labelColor, bg);
     tft.setTextFont(1);
@@ -127,7 +133,7 @@ void DisplayManager::drawLoadingScreen(const String& status) {
     tft.drawCentreString(sanitizeText(status), 120, 190, 2);
 }
 
-void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality& air) {
+void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality& air, const String& cityName, const String& updatedTime, bool dataStale) {
     uint16_t bg = isPixel() ? PIXEL_CARD_BG : SWISS_BG;
     uint16_t textW = isPixel() ? PIXEL_TEXT : SWISS_TEXT_WHITE;
     uint16_t textM = isPixel() ? PIXEL_MUTED : SWISS_TEXT_MUTED;
@@ -164,18 +170,23 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     // 2. ACENTO
     if (!isPixel()) tft.fillCircle(120, 74, 3, accent);
 
-    // 3. CIDADE EM CAIXA ALTA
+    // 3. CIDADE EM CAIXA ALTA (+ indicador de dado desatualizado)
     tft.setTextColor(textW, bg);
     tft.setTextFont(2);
-    String cityUpper = sanitizeText(weather.lastUpdated.length() > 0 ? "SANTO ANDRE" : "SANTO ANDRE");
+    String cityUpper = sanitizeText(cityName);
     cityUpper.toUpperCase();
     tft.drawCentreString(cityUpper, 120, 84, 2);
+    if (dataStale) {
+        uint16_t alertColor = isPixel() ? PIXEL_AMBER : COLOR_RED;
+        int halfW = tft.textWidth(cityUpper, 2) / 2;
+        tft.fillCircle(120 + halfW + 10, 90, 3, alertColor);
+    }
 
-    // 4. HORA ATUAL & FAIXA DE TEMPERATURA
+    // 4. FAIXA DE TEMPERATURA & HORA DA ULTIMA ATUALIZACAO
     tft.setTextColor(textM, bg);
     tft.setTextFont(2);
-    char subInfo[32];
-    snprintf(subInfo, sizeof(subInfo), "Min %.0f*  Max %.0f*", weather.tempMin, weather.tempMax);
+    char subInfo[40];
+    snprintf(subInfo, sizeof(subInfo), "Min %.0f*  Max %.0f*  |  %s", weather.tempMin, weather.tempMax, updatedTime.c_str());
     tft.drawCentreString(subInfo, 120, 106, 2);
 
     String cond = sanitizeText(weather.weatherDesc);
@@ -233,6 +244,12 @@ void DisplayManager::drawPageHourly(const std::vector<HourlyForecast>& hourly) {
     tft.drawFastHLine(12, 38, 216, border);
     drawSettingsButton();
 
+    if (hourly.empty()) {
+        tft.setTextColor(textM, bg);
+        tft.setTextFont(2);
+        tft.drawCentreString("SEM DADOS DISPONIVEIS", 120, 160, 2);
+    }
+
     int startY = 48;
     for (size_t i = 0; i < hourly.size() && i < 4; i++) {
         int y = startY + i * 58;
@@ -281,6 +298,12 @@ void DisplayManager::drawPageWeek(const std::vector<DailyForecast>& daily) {
     tft.drawCentreString("PREVISAO DE 7 DIAS", 120, 14, 2);
     tft.drawFastHLine(12, 38, 216, border);
     drawSettingsButton();
+
+    if (daily.empty()) {
+        tft.setTextColor(textM, bg);
+        tft.setTextFont(2);
+        tft.drawCentreString("SEM DADOS DISPONIVEIS", 120, 160, 2);
+    }
 
     int startY = 46;
     for (size_t i = 0; i < daily.size() && i < 5; i++) {
@@ -366,7 +389,7 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     }
 }
 
-void DisplayManager::drawPageSettings(const AppSettings& settings, const String& ip, bool dataStale) {
+void DisplayManager::drawPageSettings(const AppSettings& settings, const String& ip, int wifiRssi, bool dataStale) {
     uint16_t bg = isPixel() ? PIXEL_BG : SWISS_BG;
     uint16_t cardBg = isPixel() ? PIXEL_CARD_BG : SWISS_BG;
     uint16_t textW = isPixel() ? PIXEL_TEXT : SWISS_TEXT_WHITE;
@@ -389,10 +412,17 @@ void DisplayManager::drawPageSettings(const AppSettings& settings, const String&
     tft.setTextFont(2);
     tft.drawString(ip, 20, 72);
 
+    char rssiStr[16];
+    snprintf(rssiStr, sizeof(rssiStr), "Wi-Fi %d dBm", wifiRssi);
+    tft.setTextColor(textM, bg);
+    tft.setTextFont(1);
+    tft.drawRightString(rssiStr, 220, 78, 1);
+
     if (dataStale) {
-        tft.setTextColor(COLOR_RED, bg);
+        uint16_t alertColor = isPixel() ? PIXEL_AMBER : COLOR_RED;
+        tft.setTextColor(alertColor, bg);
         tft.setTextFont(1);
-        tft.drawRightString("DADO DESATUALIZADO", 220, 72, 1);
+        tft.drawRightString("DADO DESATUALIZADO", 220, 60, 1);
     }
 
     tft.drawFastHLine(12, 100, 216, border);

@@ -139,10 +139,10 @@ struct AppSettings {
 };
 
 // Zona de toque fixa (canto superior direito) que pula direto para PAGE_SETTINGS
-#define SETTINGS_TAP_X1     204
-#define SETTINGS_TAP_Y1     6
-#define SETTINGS_TAP_X2     234
-#define SETTINGS_TAP_Y2     30
+#define SETTINGS_TAP_X1     190
+#define SETTINGS_TAP_Y1     0
+#define SETTINGS_TAP_X2     240
+#define SETTINGS_TAP_Y2     36
 
 // Zona de toque do botao "Proximo Estilo" (somente ativo dentro de PAGE_SETTINGS)
 #define THEME_TAP_X1        12

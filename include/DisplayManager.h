@@ -11,15 +11,16 @@ public:
     void setBrightness(uint8_t brightness);
     void setTheme(int theme);
 
-    void drawPageNow(const CurrentWeather& weather, const AirQuality& air);
+    void drawPageNow(const CurrentWeather& weather, const AirQuality& air, const String& cityName, const String& updatedTime, bool dataStale);
     void drawPageHourly(const std::vector<HourlyForecast>& hourly);
     void drawPageWeek(const std::vector<DailyForecast>& daily);
     void drawPageAir(const AirQuality& air, const CurrentWeather& current);
-    void drawPageSettings(const AppSettings& settings, const String& ip, bool dataStale = false);
+    void drawPageSettings(const AppSettings& settings, const String& ip, int wifiRssi, bool dataStale = false);
     void drawLoadingScreen(const String& status);
 
     static String sanitizeText(const String& text);
     void drawSettingsButton();
+    void flashTouch(int x, int y);
 
 private:
     TFT_eSPI tft;

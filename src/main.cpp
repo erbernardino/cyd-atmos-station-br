@@ -72,7 +72,7 @@ void refreshCurrentPage() {
     display.setTheme(settings.theme);
     switch (currentPage) {
         case PAGE_NOW:
-            display.drawPageNow(currentWeather, airQuality);
+            display.drawPageNow(currentWeather, airQuality, settings.cityName, getFormattedTime(), weatherDataStale);
             break;
         case PAGE_HOURLY:
             display.drawPageHourly(hourlyForecast);
@@ -84,7 +84,7 @@ void refreshCurrentPage() {
             display.drawPageAir(airQuality, currentWeather);
             break;
         case PAGE_SETTINGS:
-            display.drawPageSettings(settings, WiFi.localIP().toString(), weatherDataStale);
+            display.drawPageSettings(settings, WiFi.localIP().toString(), WiFi.RSSI(), weatherDataStale);
             break;
         default:
             break;
@@ -245,8 +245,6 @@ void loop() {
     if (touch.isTouched()) {
         int tx, ty;
         bool gotCoords = touch.getTouchCoordinates(tx, ty);
-        Serial.printf("[Touch] Coordenadas mapeadas: X=%d Y=%d (zona settings: X %d-%d, Y %d-%d)\n",
-                      tx, ty, SETTINGS_TAP_X1, SETTINGS_TAP_X2, SETTINGS_TAP_Y1, SETTINGS_TAP_Y2);
         bool tappedSettings = gotCoords &&
             tx >= SETTINGS_TAP_X1 && tx <= SETTINGS_TAP_X2 &&
             ty >= SETTINGS_TAP_Y1 && ty <= SETTINGS_TAP_Y2 &&
@@ -255,6 +253,10 @@ void loop() {
         bool tappedTheme = gotCoords && currentPage == PAGE_SETTINGS &&
             tx >= THEME_TAP_X1 && tx <= THEME_TAP_X2 &&
             ty >= THEME_TAP_Y1 && ty <= THEME_TAP_Y2;
+
+        if (gotCoords) {
+            display.flashTouch(tx, ty); // feedback visual imediato antes do redraw completo
+        }
 
         if (tappedTheme) {
             settings.theme = (settings.theme + 1) % THEME_COUNT_IMPLEMENTED;
@@ -265,5 +267,5 @@ void loop() {
         refreshCurrentPage();
     }
 
-    delay(10);
+    yield();
 }
