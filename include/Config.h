@@ -20,6 +20,14 @@
 #define CYD_LDR_PIN         34
 
 // ==========================================
+// 🔒 PORTAL WEB - AUTENTICACAO BASICA
+// ==========================================
+// Credenciais padrao do portal de configuracao (HTTP Basic Auth).
+// TROQUE ESTES VALORES antes de expor o dispositivo em rede compartilhada.
+#define PORTAL_AUTH_USER    "admin"
+#define PORTAL_AUTH_PASS    "atmosbr"
+
+// ==========================================
 // 🎨 PALETA DE CORES (Estilo Suíço / Dieter Rams)
 // ==========================================
 #define SWISS_BG            0x0000  // #000000 - Preto Absoluto
@@ -36,8 +44,6 @@
 #define COLOR_YELLOW        0xFDE0
 #define COLOR_ORANGE        0xFB80
 #define COLOR_RED           0xF945
-#define COLOR_CYAN          0x073F
-#define COLOR_BLUE          0x2CD9
 
 enum ThemeStyle {
     THEME_SWISS = 0,

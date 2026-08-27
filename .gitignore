@@ -2,3 +2,7 @@
 .vscode/
 .DS_Store
 *.factory.bin
+.claude/
+
+# Mockups de referencia visual (pesados, nao fazem parte do build) — mantidos localmente, fora do git
+estilos/

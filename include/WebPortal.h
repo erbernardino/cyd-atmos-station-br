@@ -23,5 +23,6 @@ private:
     void handleScanWifi();
     void handleRestart();
 
+    bool requireAuth();
     String generateHTML();
 };

@@ -21,11 +21,21 @@ void WebPortal::handleClient() {
     server.handleClient();
 }
 
+bool WebPortal::requireAuth() {
+    if (!server.authenticate(PORTAL_AUTH_USER, PORTAL_AUTH_PASS)) {
+        server.requestAuthentication();
+        return false;
+    }
+    return true;
+}
+
 void WebPortal::handleRoot() {
+    if (!requireAuth()) return;
     server.send(200, "text/html", generateHTML());
 }
 
 void WebPortal::handleSaveSettings() {
+    if (!requireAuth()) return;
     if (server.hasArg("city")) settings.cityName = server.arg("city");
     if (server.hasArg("lat")) settings.latitude = server.arg("lat").toFloat();
     if (server.hasArg("lon")) settings.longitude = server.arg("lon").toFloat();
@@ -43,6 +53,7 @@ void WebPortal::handleSaveSettings() {
 }
 
 void WebPortal::handleAddWifi() {
+    if (!requireAuth()) return;
     if (server.hasArg("ssid") && server.arg("ssid").length() > 0) {
         String ssid = server.arg("ssid");
         String pass = server.hasArg("pass") ? server.arg("pass") : "";
@@ -53,6 +64,7 @@ void WebPortal::handleAddWifi() {
 }
 
 void WebPortal::handleDeleteWifi() {
+    if (!requireAuth()) return;
     if (server.hasArg("index")) {
         int idx = server.arg("index").toInt();
         storage.removeWifiNetwork(settings, idx);
@@ -62,6 +74,7 @@ void WebPortal::handleDeleteWifi() {
 }
 
 void WebPortal::handleScanWifi() {
+    if (!requireAuth()) return;
     int n = WiFi.scanNetworks();
     JsonDocument doc;
     JsonArray array = doc.to<JsonArray>();
@@ -79,6 +92,7 @@ void WebPortal::handleScanWifi() {
 }
 
 void WebPortal::handleRestart() {
+    if (!requireAuth()) return;
     server.send(200, "text/html", "<p>Reiniciando o Atmos BR... aguarde 10 segundos.</p><script>setTimeout(()=>window.location='/', 10000);</script>");
     delay(1000);
     ESP.restart();

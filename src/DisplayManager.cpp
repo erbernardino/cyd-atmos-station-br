@@ -96,7 +96,14 @@ String DisplayManager::sanitizeText(const String& str) {
     return result;
 }
 
-void DisplayManager::drawHeader(const String& city, const String& timeStr, int wifiRssi, ScreenPage page) {}
+void DisplayManager::drawStat(int x, int labelY, int valueY, const String& label, const String& value, uint16_t valueColor, uint16_t labelColor, uint16_t bg) {
+    tft.setTextColor(labelColor, bg);
+    tft.setTextFont(1);
+    tft.drawString(label, x, labelY);
+    tft.setTextColor(valueColor, bg);
+    tft.setTextFont(2);
+    tft.drawString(value, x, valueY);
+}
 
 void DisplayManager::drawSettingsButton() {
     int cx = (SETTINGS_TAP_X1 + SETTINGS_TAP_X2) / 2;
@@ -184,48 +191,24 @@ void DisplayManager::drawPageNow(const CurrentWeather& weather, const AirQuality
     tft.drawFastVLine(120, 142, 148, border);
 
     // QUADRANTE 1: VENTO
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("VENTO", 20, 154);
-
     char windBuf[16];
     snprintf(windBuf, sizeof(windBuf), "%.0f KM/H", weather.windSpeed);
-    tft.setTextColor(textW, bg);
-    tft.setTextFont(2);
-    tft.drawString(windBuf, 20, 178);
+    drawStat(20, 154, 178, "VENTO", windBuf, textW, textM, bg);
 
     // QUADRANTE 2: UMIDADE
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("UMIDADE", 132, 154);
-
     char humBuf[10];
     snprintf(humBuf, sizeof(humBuf), "%d %%", weather.humidity);
-    tft.setTextColor(textW, bg);
-    tft.setTextFont(2);
-    tft.drawString(humBuf, 132, 178);
+    drawStat(132, 154, 178, "UMIDADE", humBuf, textW, textM, bg);
 
     // QUADRANTE 3: PRESSÃO
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("PRESSAO", 20, 228);
-
     char pressBuf[16];
     snprintf(pressBuf, sizeof(pressBuf), "%.0f HPA", weather.pressure);
-    tft.setTextColor(textW, bg);
-    tft.setTextFont(2);
-    tft.drawString(pressBuf, 20, 252);
+    drawStat(20, 228, 252, "PRESSAO", pressBuf, textW, textM, bg);
 
     // QUADRANTE 4: QUALIDADE DO AR
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("QUALIDADE AR", 132, 228);
-
     String aqiText = sanitizeText(air.levelDesc);
     aqiText.toUpperCase();
-    tft.setTextColor(air.levelColor, bg);
-    tft.setTextFont(2);
-    tft.drawString(aqiText, 132, 252);
+    drawStat(132, 228, 252, "QUALIDADE AR", aqiText, air.levelColor, textM, bg);
 
     // BARRA INFERIOR / PAGINAÇÃO
     int dotX = 100;
@@ -360,41 +343,21 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     tft.drawFastHLine(12, 274, 216, border);
     tft.drawFastVLine(120, 114, 160, border);
 
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("PM 2.5", 20, 126);
     char pm25[16];
     snprintf(pm25, sizeof(pm25), "%.1f ug/m3", air.pm25);
-    tft.setTextColor(textW, bg);
-    tft.setTextFont(2);
-    tft.drawString(pm25, 20, 150);
+    drawStat(20, 126, 150, "PM 2.5", pm25, textW, textM, bg);
 
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("PM 10", 132, 126);
     char pm10[16];
     snprintf(pm10, sizeof(pm10), "%.1f ug/m3", air.pm10);
-    tft.setTextColor(textW, bg);
-    tft.setTextFont(2);
-    tft.drawString(pm10, 132, 150);
+    drawStat(132, 126, 150, "PM 10", pm10, textW, textM, bg);
 
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("OZONIO", 20, 206);
     char oz[16];
     snprintf(oz, sizeof(oz), "%.0f ug/m3", air.ozone);
-    tft.setTextColor(textW, bg);
-    tft.setTextFont(2);
-    tft.drawString(oz, 20, 230);
+    drawStat(20, 206, 230, "OZONIO", oz, textW, textM, bg);
 
-    tft.setTextColor(textM, bg);
-    tft.setTextFont(1);
-    tft.drawString("INDICE UV", 132, 206);
     char uv[16];
     snprintf(uv, sizeof(uv), "Nivel %d", current.uvIndex);
-    tft.setTextColor((current.uvIndex >= 6) ? accent : green, bg);
-    tft.setTextFont(2);
-    tft.drawString(uv, 132, 230);
+    drawStat(132, 206, 230, "INDICE UV", uv, (current.uvIndex >= 6) ? accent : green, textM, bg);
 
     int dotX = 100;
     for (int i = 0; i < PAGE_COUNT; i++) {
@@ -403,7 +366,7 @@ void DisplayManager::drawPageAir(const AirQuality& air, const CurrentWeather& cu
     }
 }
 
-void DisplayManager::drawPageSettings(const AppSettings& settings, const String& ip) {
+void DisplayManager::drawPageSettings(const AppSettings& settings, const String& ip, bool dataStale) {
     uint16_t bg = isPixel() ? PIXEL_BG : SWISS_BG;
     uint16_t cardBg = isPixel() ? PIXEL_CARD_BG : SWISS_BG;
     uint16_t textW = isPixel() ? PIXEL_TEXT : SWISS_TEXT_WHITE;
@@ -425,6 +388,12 @@ void DisplayManager::drawPageSettings(const AppSettings& settings, const String&
     tft.setTextColor(accent, bg);
     tft.setTextFont(2);
     tft.drawString(ip, 20, 72);
+
+    if (dataStale) {
+        tft.setTextColor(COLOR_RED, bg);
+        tft.setTextFont(1);
+        tft.drawRightString("DADO DESATUALIZADO", 220, 72, 1);
+    }
 
     tft.drawFastHLine(12, 100, 216, border);
 
@@ -455,7 +424,7 @@ void DisplayManager::drawPageSettings(const AppSettings& settings, const String&
     tft.drawString("FIRMWARE", 20, 238);
     tft.setTextColor(green, bg);
     tft.setTextFont(2);
-    tft.drawString("Atmos BR v1.5.0 (Open-Source)", 20, 258);
+    tft.drawString("Atmos BR v1.6.0 (Open-Source)", 20, 258);
 
     int dotX = 100;
     for (int i = 0; i < PAGE_COUNT; i++) {

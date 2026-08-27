@@ -29,8 +29,13 @@ ScreenPage currentPage = PAGE_NOW;
 unsigned long lastWeatherUpdate = 0;
 unsigned long lastAirUpdate = 0;
 unsigned long lastClockMinute = 99;
+unsigned long lastWifiCheck = 0;
+unsigned long lastWeatherSuccess = 0;
+bool weatherDataStale = false;
 const unsigned long WEATHER_INTERVAL = 15 * 60 * 1000; // 15 min
 const unsigned long AIR_INTERVAL     = 30 * 60 * 1000; // 30 min
+const unsigned long WIFI_CHECK_INTERVAL = 30 * 1000;   // 30 s
+const unsigned long STALE_THRESHOLD  = 2 * WEATHER_INTERVAL; // dado velho apos 2 ciclos sem sucesso
 
 void setupRGB() {
     pinMode(CYD_LED_RED, OUTPUT);
@@ -79,7 +84,7 @@ void refreshCurrentPage() {
             display.drawPageAir(airQuality, currentWeather);
             break;
         case PAGE_SETTINGS:
-            display.drawPageSettings(settings, WiFi.localIP().toString());
+            display.drawPageSettings(settings, WiFi.localIP().toString(), weatherDataStale);
             break;
         default:
             break;
@@ -174,12 +179,15 @@ void setup() {
     configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
 
     display.drawLoadingScreen("Obtendo dados meteorologicos...");
-    weatherService.updateWeatherData(settings.latitude, settings.longitude, 
-                                     currentWeather, hourlyForecast, dailyForecast);
+    if (weatherService.updateWeatherData(settings.latitude, settings.longitude,
+                                         currentWeather, hourlyForecast, dailyForecast)) {
+        lastWeatherSuccess = millis();
+    }
     weatherService.updateAirQuality(settings.latitude, settings.longitude, airQuality);
 
     lastWeatherUpdate = millis();
     lastAirUpdate = millis();
+    lastWifiCheck = millis();
 
     setRGBColor(false, true, false);
     delay(400);
@@ -209,16 +217,28 @@ void loop() {
     // 2. Atualização Meteorológica (a cada 15 min)
     if (now - lastWeatherUpdate >= WEATHER_INTERVAL) {
         lastWeatherUpdate = now;
-        weatherService.updateWeatherData(settings.latitude, settings.longitude,
-                                         currentWeather, hourlyForecast, dailyForecast);
+        if (weatherService.updateWeatherData(settings.latitude, settings.longitude,
+                                             currentWeather, hourlyForecast, dailyForecast)) {
+            lastWeatherSuccess = now;
+        }
         updateWeatherLED();
         refreshCurrentPage();
     }
+    weatherDataStale = (millis() - lastWeatherSuccess) > STALE_THRESHOLD;
 
     // 3. Qualidade do Ar (a cada 30 min)
     if (now - lastAirUpdate >= AIR_INTERVAL) {
         lastAirUpdate = now;
         weatherService.updateAirQuality(settings.latitude, settings.longitude, airQuality);
+    }
+
+    // 3b. Reconexão automática de Wi-Fi (a cada 30s, se caiu)
+    if (now - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
+        lastWifiCheck = now;
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println("[Wi-Fi] Conexao perdida, tentando reconectar...");
+            wifiMulti.run();
+        }
     }
 
     // 4. Detecção de Toque
